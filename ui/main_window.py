@@ -3,14 +3,15 @@
 from pathlib import Path
 
 from PySide6.QtCore import Qt, QUrl
-from PySide6.QtGui import QDesktopServices
+from PySide6.QtGui import QActionGroup, QDesktopServices
 from PySide6.QtWidgets import (
+    QApplication,
     QComboBox,
     QDialog,
     QDialogButtonBox,
-    QComboBox,
     QFileDialog,
     QHBoxLayout,
+    QHeaderView,
     QInputDialog,
     QLabel,
     QListWidget,
@@ -26,6 +27,66 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+
+
+LIGHT_THEME = """
+QMainWindow, QDialog, QWidget { background: #f5f7fb; color: #202938; }
+QWidget { color: #202938; }
+QLabel { color: #354258; }
+QMenuBar, QMenu { background: #ffffff; color: #202938; }
+QMenuBar::item { padding: 6px 10px; }
+QMenuBar::item:selected, QMenu::item:selected { background: #e8eefb; }
+QLabel#appHeading { color: #172033; font-size: 22px; font-weight: 700; }
+QLabel#appSubtitle { color: #5e6b7e; font-size: 13px; }
+QTabWidget::pane { border: 1px solid #d8deea; border-radius: 6px; background: #ffffff; }
+QTabBar::tab { background: #e9edf5; color: #536176; padding: 9px 14px; margin-right: 2px; }
+QTabBar::tab:selected { background: #ffffff; color: #1d4ed8; font-weight: 600; }
+QPushButton { background: #ffffff; color: #202938; border: 1px solid #c9d2e3; border-radius: 5px; padding: 7px 12px; }
+QPushButton:hover { background: #eef4ff; border-color: #86a9e8; }
+QPushButton:pressed { background: #dce9ff; }
+QComboBox, QLineEdit { background: #ffffff; color: #202938; border: 1px solid #c9d2e3; border-radius: 5px; padding: 6px 8px; }
+QComboBox QAbstractItemView, QListWidget { background: #ffffff; color: #202938; selection-background-color: #dbeafe; selection-color: #172033; }
+QTableWidget { background: #ffffff; color: #202938; alternate-background-color: #f4f7fb; gridline-color: #dfe5ef; border: 1px solid #d8deea; border-radius: 5px; }
+QTableWidget::item { color: #202938; padding: 5px; }
+QTableWidget::item:selected { background: #dbeafe; color: #172033; }
+QHeaderView::section { background: #edf1f7; color: #39465b; border: 0; border-right: 1px solid #d8deea; border-bottom: 1px solid #cdd6e5; padding: 7px 8px; font-weight: 600; }
+QHeaderView::section:vertical { background: #edf1f7; color: #39465b; }
+QTableCornerButton::section { background: #edf1f7; border: 0; border-right: 1px solid #d8deea; border-bottom: 1px solid #cdd6e5; }
+QSplitter::handle { background: #cbd5e1; }
+QSplitter::handle:hover { background: #6d9ee8; }
+QDialogButtonBox QPushButton { min-width: 80px; }
+QStatusBar { color: #536176; }
+"""
+
+
+DARK_THEME = """
+QMainWindow, QDialog, QWidget { background: #20252f; color: #edf2f7; }
+QWidget { color: #edf2f7; }
+QLabel { color: #cbd5e1; }
+QMenuBar, QMenu { background: #252b35; color: #edf2f7; }
+QMenuBar::item { padding: 6px 10px; }
+QMenuBar::item:selected, QMenu::item:selected { background: #3a4658; }
+QLabel#appHeading { color: #f8fafc; font-size: 22px; font-weight: 700; }
+QLabel#appSubtitle { color: #aebdce; font-size: 13px; }
+QTabWidget::pane { border: 1px solid #465365; border-radius: 6px; background: #252b35; }
+QTabBar::tab { background: #303846; color: #c3cedc; padding: 9px 14px; margin-right: 2px; }
+QTabBar::tab:selected { background: #252b35; color: #8bb8ff; font-weight: 600; }
+QPushButton { background: #2a313c; color: #edf2f7; border: 1px solid #536276; border-radius: 5px; padding: 7px 12px; }
+QPushButton:hover { background: #35445a; border-color: #78a9ed; }
+QPushButton:pressed { background: #405a7d; }
+QComboBox, QLineEdit { background: #2a313c; color: #edf2f7; border: 1px solid #536276; border-radius: 5px; padding: 6px 8px; }
+QComboBox QAbstractItemView, QListWidget { background: #2a313c; color: #edf2f7; selection-background-color: #3b6ea8; selection-color: #ffffff; }
+QTableWidget { background: #252b35; color: #edf2f7; alternate-background-color: #2d3542; gridline-color: #465365; border: 1px solid #465365; border-radius: 5px; }
+QTableWidget::item { color: #edf2f7; padding: 5px; }
+QTableWidget::item:selected { background: #315f93; color: #ffffff; }
+QHeaderView::section { background: #303846; color: #edf2f7; border: 0; border-right: 1px solid #465365; border-bottom: 1px solid #536276; padding: 7px 8px; font-weight: 600; }
+QHeaderView::section:vertical { background: #303846; color: #edf2f7; }
+QTableCornerButton::section { background: #303846; border: 0; border-right: 1px solid #465365; border-bottom: 1px solid #536276; }
+QSplitter::handle { background: #536276; }
+QSplitter::handle:hover { background: #78a9ed; }
+QDialogButtonBox QPushButton { min-width: 80px; }
+QStatusBar { color: #aebdce; }
+"""
 
 from launchers.prism.discovery import find_default_prism_data_dir, is_prism_data_dir
 from launchers.prism.instance_parser import scan_instances
@@ -161,7 +222,10 @@ class MainWindow(QMainWindow):
         """Создаёт интерфейс и выполняет первое сканирование."""
         super().__init__()
         self.setWindowTitle("MainOrginizer")
-        self.resize(1180, 720)
+        self.resize(1280, 780)
+        self.setMinimumSize(1000, 620)
+        self.theme_name = "light"
+        self._apply_theme(self.theme_name)
         self.prism_data_dir: Path | None = find_default_prism_data_dir()
         self.library_dir = default_library_dir()
         self.asset_library_dir = default_asset_library_dir()
@@ -180,11 +244,21 @@ class MainWindow(QMainWindow):
         self.mods: list[ModFile] = []
 
         central = QWidget(self)
+        central.setObjectName("mainContent")
         self.setCentralWidget(central)
         layout = QVBoxLayout(central)
+        layout.setContentsMargins(18, 14, 18, 10)
+        layout.setSpacing(10)
         heading = QLabel("MainOrginizer — менеджер модификаций Minecraft")
-        heading.setStyleSheet("font-size: 20px; font-weight: 600;")
+        heading.setObjectName("appHeading")
         layout.addWidget(heading)
+        subtitle = QLabel(
+            "Управляйте игровыми окружениями, библиотекой модов и профилями в одном окне. "
+            "Разделители столбцов можно перетаскивать мышью."
+        )
+        subtitle.setObjectName("appSubtitle")
+        subtitle.setWordWrap(True)
+        layout.addWidget(subtitle)
         self.tabs = QTabWidget()
         layout.addWidget(self.tabs, 1)
 
@@ -218,6 +292,19 @@ class MainWindow(QMainWindow):
         self.refresh_assets()
         self.refresh_config_backup_choices()
 
+    def _apply_theme(self, theme_name: str) -> None:
+        """Применяет тему на уровне приложения, включая все дочерние диалоги."""
+        self.theme_name = "dark" if theme_name == "dark" else "light"
+        application = QApplication.instance()
+        if application is not None:
+            application.setStyleSheet(DARK_THEME if self.theme_name == "dark" else LIGHT_THEME)
+        for name, action in getattr(self, "theme_actions", {}).items():
+            action.setChecked(name == self.theme_name)
+
+    def _set_theme(self, theme_name: str) -> None:
+        """Переключает тему из меню «Вид»."""
+        self._apply_theme(theme_name)
+
     def _build_instances_tab(self) -> None:
         """Создаёт вкладку игровых окружений."""
         page = QWidget()
@@ -239,7 +326,6 @@ class MainWindow(QMainWindow):
             ["Источник", "Название", "Папка (ID)", "Minecraft", "Загрузчик", "Версия загрузчика", "Статус"]
         )
         self._configure_table(self.table)
-        self.table.horizontalHeader().setSectionResizeMode(1, self.table.horizontalHeader().ResizeMode.Stretch)
         layout.addWidget(self.table, 1)
         self.add_game_dir_button = QPushButton("Добавить папку игры…")
         self.create_official_instance_button = QPushButton("Создать сборку для Minecraft Launcher…")
@@ -274,8 +360,6 @@ class MainWindow(QMainWindow):
         self.library_table = QTableWidget(0, 11)
         self.library_table.setHorizontalHeaderLabels(["Название", "Версия", "ID", "Minecraft", "Загрузчик", "Зависимости", "Совместимость", "Файл", "Размер", "Метки", "Путь"])
         self._configure_table(self.library_table)
-        self.library_table.horizontalHeader().setSectionResizeMode(0, self.library_table.horizontalHeader().ResizeMode.Stretch)
-        self.library_table.horizontalHeader().setSectionResizeMode(10, self.library_table.horizontalHeader().ResizeMode.Stretch)
         layout.addWidget(self.library_table, 1)
         self.tabs.addTab(page, "Библиотека модов")
 
@@ -310,11 +394,18 @@ class MainWindow(QMainWindow):
             ["Профиль", "Игровое окружение", "Minecraft", "Загрузчик", "Модов выбрано"]
         )
         self._configure_table(self.profiles_table)
-        self.profiles_table.horizontalHeader().setSectionResizeMode(0, self.profiles_table.horizontalHeader().ResizeMode.Stretch)
         layout.addWidget(self.profiles_table, 1)
         self.profile_right = QWidget()
         splitter.addWidget(self.profile_left)
         splitter.addWidget(self.profile_right)
+        splitter.setChildrenCollapsible(False)
+        splitter.setCollapsible(0, False)
+        splitter.setCollapsible(1, False)
+        splitter.setHandleWidth(8)
+        splitter.setOpaqueResize(True)
+        self.profile_left.setMinimumWidth(380)
+        self.profile_right.setMinimumWidth(460)
+        splitter.setSizes([500, 680])
         splitter.setStretchFactor(0, 3)
         splitter.setStretchFactor(1, 4)
         outer.addWidget(splitter, 1)
@@ -339,12 +430,6 @@ class MainWindow(QMainWindow):
             ["Экземпляр", "Файл", "Результат проверки", "Размер", "Путь"]
         )
         self._configure_table(self.environment_table)
-        self.environment_table.horizontalHeader().setSectionResizeMode(
-            2, self.environment_table.horizontalHeader().ResizeMode.Stretch
-        )
-        self.environment_table.horizontalHeader().setSectionResizeMode(
-            4, self.environment_table.horizontalHeader().ResizeMode.Stretch
-        )
         layout.addWidget(self.environment_table, 1)
         self.tabs.addTab(page, "Проверка окружений")
 
@@ -383,7 +468,6 @@ class MainWindow(QMainWindow):
         self.virtualization_table = QTableWidget(0, 3)
         self.virtualization_table.setHorizontalHeaderLabels(["Файл", "Действие", "Подробности"])
         self._configure_table(self.virtualization_table)
-        self.virtualization_table.horizontalHeader().setSectionResizeMode(2, self.virtualization_table.horizontalHeader().ResizeMode.Stretch)
         layout.addWidget(self.virtualization_table, 1)
 
     def _build_menu_bar(self) -> None:
@@ -394,9 +478,16 @@ class MainWindow(QMainWindow):
         file_menu.addSeparator()
         file_menu.addAction("Выход", self.close)
         view_menu = self.menuBar().addMenu("Вид")
-        for index, title in enumerate(["Игровые окружения", "Библиотека модов", "Профили", "Проверка окружений", "Ресурспаки и шейдеры", "Конфиги и резервные копии"]):
+        theme_group = QActionGroup(view_menu)
+        theme_group.setExclusive(True)
+        self.theme_actions = {}
+        for theme_name, title in (("light", "Белая"), ("dark", "Темная")):
             action = view_menu.addAction(title)
-            action.triggered.connect(lambda checked=False, tab_index=index: self.tabs.setCurrentIndex(tab_index))
+            action.setCheckable(True)
+            action.setChecked(theme_name == self.theme_name)
+            action.triggered.connect(lambda checked=False, name=theme_name: self._set_theme(name))
+            theme_group.addAction(action)
+            self.theme_actions[theme_name] = action
         settings_menu = self.menuBar().addMenu("Настройки")
         settings_menu.addAction("Открыть папку библиотеки", self.open_library_folder)
         help_menu = self.menuBar().addMenu("Помощь")
@@ -433,8 +524,6 @@ class MainWindow(QMainWindow):
         self.asset_table = QTableWidget(0, 3)
         self.asset_table.setHorizontalHeaderLabels(["Архив", "Размер", "Путь"])
         self._configure_table(self.asset_table)
-        self.asset_table.horizontalHeader().setSectionResizeMode(0, self.asset_table.horizontalHeader().ResizeMode.Stretch)
-        self.asset_table.horizontalHeader().setSectionResizeMode(2, self.asset_table.horizontalHeader().ResizeMode.Stretch)
         layout.addWidget(self.asset_table, 1)
         profile_row = QHBoxLayout()
         profile_row.addWidget(QLabel("Профиль для применения:"))
@@ -458,7 +547,6 @@ class MainWindow(QMainWindow):
         self.asset_plan_table = QTableWidget(0, 3)
         self.asset_plan_table.setHorizontalHeaderLabels(["Архив", "Действие", "Подробности"])
         self._configure_table(self.asset_plan_table)
-        self.asset_plan_table.horizontalHeader().setSectionResizeMode(2, self.asset_plan_table.horizontalHeader().ResizeMode.Stretch)
         layout.addWidget(self.asset_plan_table, 1)
         self.tabs.addTab(page, "Ресурспаки и шейдеры")
 
@@ -800,13 +888,28 @@ class MainWindow(QMainWindow):
 
     @staticmethod
     def _configure_table(table: QTableWidget) -> None:
-        """Настраивает таблицу и включает сортировку."""
+        """Настраивает таблицу с независимым изменением ширины столбцов."""
         table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
         table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         table.setAlternatingRowColors(True)
         table.setSortingEnabled(True)
-        table.horizontalHeader().setStretchLastSection(True)
+        header = table.horizontalHeader()
+        header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
+        header.setStretchLastSection(False)
+        header.setMinimumSectionSize(72)
+        header.setDefaultSectionSize(128)
+        header.setSectionsMovable(True)
+        header.setHighlightSections(False)
+        vertical_header = table.verticalHeader()
+        vertical_header.setSectionResizeMode(QHeaderView.ResizeMode.Fixed)
+        vertical_header.setDefaultSectionSize(30)
+        vertical_header.setMinimumSectionSize(30)
+        vertical_header.setSectionsClickable(False)
+        vertical_header.setHighlightSections(False)
+        table.setWordWrap(False)
+        table.setHorizontalScrollMode(QTableWidget.ScrollMode.ScrollPerPixel)
+        table.setVerticalScrollMode(QTableWidget.ScrollMode.ScrollPerPixel)
         table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
 
     def _set_item(self, table: QTableWidget, row: int, column: int, value: str,
