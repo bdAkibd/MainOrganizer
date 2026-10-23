@@ -32,7 +32,7 @@ class EnvironmentScanTests(unittest.TestCase):
             findings = scan_environment_mods([self._instance(root)], library)
 
             self.assertEqual(len(findings), 1)
-            self.assertEqual(findings[0].status, "Внешний мод — не импортирован")
+            self.assertEqual(findings[0].status, "External mod — not imported")
             self.assertTrue(external.is_file())
             self.assertFalse(library.exists())
 
@@ -51,7 +51,7 @@ class EnvironmentScanTests(unittest.TestCase):
 
             findings = scan_environment_mods([self._instance(root)], library)
 
-            self.assertEqual(findings[0].status, "Копия файла из библиотеки")
+            self.assertEqual(findings[0].status, "Copy of library file")
             self.assertEqual(instance_jar.read_bytes(), b"known mod")
 
     def test_missing_mods_folder_is_reported(self) -> None:
@@ -59,7 +59,7 @@ class EnvironmentScanTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary_dir:
             root = Path(temporary_dir)
             findings = scan_environment_mods([self._instance(root)], root / "library")
-            self.assertEqual(findings[0].status, "Папка mods не найдена")
+            self.assertEqual(findings[0].status, "mods folder not found")
 
 
 if __name__ == "__main__":

@@ -43,7 +43,7 @@ class VirtualizationTests(unittest.TestCase):
     def test_preview_does_not_change_files(self) -> None:
         plan = preview_profile(self.profile, self.library)
         self.assertTrue(plan.can_apply)
-        self.assertEqual([item.action for item in plan.actions], ["Создать ссылку"])
+        self.assertEqual([item.action for item in plan.actions], ["Create link"])
         self.assertFalse((self.mods_dir / "alpha.jar").exists())
 
     def test_apply_creates_symlink_and_rollback_removes_it(self) -> None:
@@ -85,7 +85,7 @@ class VirtualizationTests(unittest.TestCase):
         self.profile["enabled_mod_hashes"] = ["not-present"]
         plan = preview_profile(self.profile, self.library)
         self.assertFalse(plan.can_apply)
-        self.assertTrue(any("отсутствует" in error for error in plan.errors))
+        self.assertTrue(any("missing" in error for error in plan.errors))
 
 
     def test_hardlink_fallback_when_symlink_privilege_is_missing(self) -> None:

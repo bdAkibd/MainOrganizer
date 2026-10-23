@@ -1,4 +1,4 @@
-"""Модель файла мода в библиотеке."""
+"""Mod library file model."""
 
 from dataclasses import dataclass
 from pathlib import Path
@@ -6,7 +6,7 @@ from pathlib import Path
 
 @dataclass(slots=True)
 class ModFile:
-    """Хранит основные сведения о файле мода."""
+    """Store core information about a mod file."""
 
     name: str
     path: Path

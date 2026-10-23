@@ -1,4 +1,4 @@
-"""Тесты безопасного импорта библиотеки модов."""
+"""Tests for safe mod library import."""
 
 import tempfile
 import unittest
@@ -8,10 +8,10 @@ from services.mod_library import import_mods, scan_mods
 
 
 class ModLibraryTests(unittest.TestCase):
-    """Проверяет сканирование и импорт без перемещения оригиналов."""
+    """Verify scanning and importing without moving originals."""
 
     def test_import_copies_file_and_keeps_source(self) -> None:
-        """Импорт копирует файл в библиотеку, сохраняя исходный файл."""
+        """Import copies a file into the library and preserves the original."""
         with tempfile.TemporaryDirectory() as temporary_dir:
             root = Path(temporary_dir)
             source = root / "external.jar"
@@ -25,7 +25,7 @@ class ModLibraryTests(unittest.TestCase):
             self.assertEqual([mod.name for mod in scan_mods(library)], ["external.jar"])
 
     def test_duplicate_content_is_skipped(self) -> None:
-        """Одинаковое содержимое не импортируется повторно под другим именем."""
+        """Identical content is not imported again under another name."""
         with tempfile.TemporaryDirectory() as temporary_dir:
             root = Path(temporary_dir)
             first = root / "first.jar"
@@ -40,7 +40,7 @@ class ModLibraryTests(unittest.TestCase):
             self.assertEqual(len(scan_mods(library)), 1)
 
     def test_different_content_with_same_name_is_renamed(self) -> None:
-        """Файл с тем же именем, но другим содержимым получает новое имя."""
+        """A file with the same name but different content gets a new name."""
         with tempfile.TemporaryDirectory() as temporary_dir:
             root = Path(temporary_dir)
             source_a = root / "mod.jar"

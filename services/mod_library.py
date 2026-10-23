@@ -1,4 +1,4 @@
-"""Безопасное сканирование и импорт файлов модов."""
+"""Safely scan and import mod files."""
 
 import hashlib
 import os
@@ -9,7 +9,7 @@ from models.mod_file import ModFile
 
 
 def default_library_dir() -> Path:
-    """Возвращает стандартный каталог общей библиотеки модов."""
+    """Return the default shared mod library directory."""
     local_app_data = os.environ.get("LOCALAPPDATA")
     if local_app_data:
         return Path(local_app_data) / "MainOrginizer" / "library" / "mods"
@@ -17,7 +17,7 @@ def default_library_dir() -> Path:
 
 
 def file_sha256(path: Path) -> str:
-    """Вычисляет SHA-256 файла потоковым чтением."""
+    """Compute a file SHA-256 digest using streaming reads."""
     digest = hashlib.sha256()
     with path.open("rb") as file:
         for chunk in iter(lambda: file.read(1024 * 1024), b""):
@@ -26,7 +26,7 @@ def file_sha256(path: Path) -> str:
 
 
 def scan_mods(library_dir: Path) -> list[ModFile]:
-    """Возвращает JAR-файлы из библиотеки без изменения файлов."""
+    """Return JAR files from the library without modifying files."""
     if not library_dir.is_dir():
         return []
 
@@ -48,7 +48,7 @@ def scan_mods(library_dir: Path) -> list[ModFile]:
 
 
 def import_mods(source_paths: list[Path], library_dir: Path) -> tuple[int, int, list[str]]:
-    """Копирует JAR в библиотеку, пропуская дубликаты по SHA-256."""
+    """Copy a JAR into the library while skipping SHA-256 duplicates."""
     library_dir.mkdir(parents=True, exist_ok=True)
     known_hashes: set[str] = set()
     for mod in scan_mods(library_dir):

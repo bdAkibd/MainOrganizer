@@ -1,4 +1,4 @@
-"""Точка входа MainOrginizer."""
+"""MainOrginizer entry point."""
 
 import sys
 
@@ -8,7 +8,7 @@ from ui.main_window import MainWindow
 
 
 def main() -> int:
-    """Запускает приложение."""
+    """Start the application."""
     application = QApplication(sys.argv)
     application.setApplicationName("MainOrginizer")
     application.setOrganizationName("MainOrginizer")

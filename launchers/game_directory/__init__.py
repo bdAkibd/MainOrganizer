@@ -1,1 +1,1 @@
-"""Адаптеры для обычных папок игры Minecraft."""
+"""Adapters for regular Minecraft game folders."""

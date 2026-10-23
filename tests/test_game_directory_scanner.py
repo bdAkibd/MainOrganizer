@@ -1,4 +1,4 @@
-"""Тесты адаптера игровых папок TLauncher и Legacy Launcher."""
+"""Tests for the TLauncher and Legacy Launcher game-folder adapter."""
 
 import json
 import tempfile
@@ -9,7 +9,7 @@ from launchers.game_directory.scanner import is_game_directory, scan_game_direct
 
 
 class GameDirectoryScannerTests(unittest.TestCase):
-    """Проверяет распознавание версий из JSON обычного каталога игры."""
+    """Verify version detection from a regular game directory JSON file."""
 
     def test_detects_fabric_from_version_json(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -42,7 +42,7 @@ class GameDirectoryScannerTests(unittest.TestCase):
 
 
 class LegacyEnvironmentDiscoveryTests(unittest.TestCase):
-    """Проверяет обнаружение отдельных окружений Legacy Launcher."""
+    """Verify discovery of isolated Legacy Launcher environments."""
 
     def test_discovers_home_environments_separately(self) -> None:
         from launchers.game_directory.scanner import discover_game_environments
@@ -166,6 +166,31 @@ class LegacyEnvironmentDiscoveryTests(unittest.TestCase):
             self.assertEqual(len(found), 1)
             self.assertEqual(found[0].path, version)
             self.assertEqual(found[0].loader, "Fabric")
+
+
+class CurseForgeDiscoveryTests(unittest.TestCase):
+    """Verify discovery of CurseForge instances with a nested minecraft folder."""
+
+    def test_discovers_curseforge_instances_and_manifest_metadata(self) -> None:
+        from launchers.game_directory.scanner import discover_game_environments, is_game_directory, launcher_for_game_directory
+
+        with tempfile.TemporaryDirectory() as temporary:
+            instances = Path(temporary) / "curseforge" / "minecraft" / "Instances"
+            instance = instances / "My Modpack"
+            (instance / "minecraft" / "mods").mkdir(parents=True)
+            (instance / "manifest.json").write_text(json.dumps({
+                "name": "My Modpack",
+                "minecraft": {"version": "1.20.1", "modLoaders": [{"id": "forge-47.2.0", "primary": True}]},
+            }), encoding="utf-8")
+
+            self.assertTrue(is_game_directory(instances))
+            self.assertEqual(launcher_for_game_directory(instances), "CurseForge")
+            found = discover_game_environments(instances)
+            self.assertEqual(len(found), 1)
+            self.assertEqual(found[0].path, instance)
+            self.assertEqual(found[0].minecraft_version, "1.20.1")
+            self.assertEqual(found[0].loader, "Forge")
+            self.assertEqual(found[0].loader_version, "47.2.0")
 
 
 if __name__ == "__main__":

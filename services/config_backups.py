@@ -25,7 +25,7 @@ def create_config_backup(instance_path: Path, backup_root: Path | None = None) -
     """Archives config files without modifying the game instance."""
     config_dir = find_config_dir(instance_path)
     if config_dir is None:
-        return False, "Папка config не найдена в экземпляре."
+        return False, "The config folder was not found in the instance."
     backup_root = backup_root or default_config_backup_dir()
     backup_root.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -41,8 +41,8 @@ def create_config_backup(instance_path: Path, backup_root: Path | None = None) -
                     archive.write(path, path.relative_to(config_dir).as_posix())
     except (OSError, zipfile.BadZipFile) as error:
         destination.unlink(missing_ok=True)
-        return False, f"Не удалось создать резервную копию: {error}"
-    return True, f"Резервная копия создана: {destination}"
+        return False, f"Could not create backup: {error}"
+    return True, f"Backup created: {destination}"
 
 
 def list_config_backups(backup_root: Path | None = None) -> list[Path]:
@@ -56,7 +56,7 @@ def list_config_backups(backup_root: Path | None = None) -> list[Path]:
 def restore_config_backup(archive_path: Path, instance_path: Path, backup_root: Path | None = None) -> tuple[bool, str]:
     """Restores a backup after validating every archive path and creates a safety backup first."""
     if not archive_path.is_file():
-        return False, "Архив резервной копии не найден."
+        return False, "The backup archive was not found."
     config_dir = find_config_dir(instance_path)
     if config_dir is None:
         config_dir = (instance_path / ".minecraft" / "config") if (instance_path / ".minecraft").is_dir() else instance_path / "config"
@@ -67,11 +67,11 @@ def restore_config_backup(archive_path: Path, instance_path: Path, backup_root: 
                 try:
                     target.relative_to(config_dir.resolve())
                 except ValueError:
-                    return False, f"Небезопасный путь в архиве: {member.filename}"
+                    return False, f"Unsafe path in archive: {member.filename}"
             if config_dir.is_dir():
                 safety_ok, safety_message = create_config_backup(instance_path, backup_root)
                 if not safety_ok:
-                    return False, "Не удалось сохранить текущие конфиги перед восстановлением: " + safety_message
+                    return False, "Could not save current configs before restoration: " + safety_message
             config_dir.mkdir(parents=True, exist_ok=True)
             for member in archive.infolist():
                 if member.is_dir():
@@ -82,5 +82,5 @@ def restore_config_backup(archive_path: Path, instance_path: Path, backup_root: 
                     with archive.open(member) as source, target.open("wb") as destination:
                         destination.write(source.read())
     except (OSError, zipfile.BadZipFile, RuntimeError) as error:
-        return False, f"Не удалось восстановить конфигурации: {error}"
-    return True, f"Конфигурации восстановлены из {archive_path.name}. Файлы, отсутствующие в архиве, не удалялись."
+        return False, f"Could not restore configs: {error}"
+    return True, f"Configs restored from {archive_path.name}. Files missing from the archive were not deleted."

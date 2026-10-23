@@ -1,4 +1,4 @@
-"""Тесты сохранения пользовательских тегов и профилей."""
+"""Tests for user tag and profile persistence."""
 
 import tempfile
 import unittest
@@ -8,10 +8,10 @@ from services.user_data import UserDataStore
 
 
 class UserDataTests(unittest.TestCase):
-    """Проверяет сохранение метаданных без работы с файлами игры."""
+    """Verify metadata persistence without touching game files."""
 
     def test_tags_persist_and_deduplicate(self) -> None:
-        """Метки сохраняются и повторяющиеся значения удаляются."""
+        """Tags are persisted and duplicate values are removed."""
         with tempfile.TemporaryDirectory() as temporary_dir:
             path = Path(temporary_dir) / "user_data.json"
             store = UserDataStore(path)
@@ -21,8 +21,18 @@ class UserDataTests(unittest.TestCase):
             loaded.set_tags("abc", [])
             self.assertEqual(UserDataStore(path).tags_for("abc"), [])
 
+    def test_minecraft_version_overrides_persist_and_deduplicate(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_dir:
+            path = Path(temporary_dir) / "user_data.json"
+            store = UserDataStore(path)
+            store.set_minecraft_versions("abc", ["1.20.1", " 1.20.1 ", "1.21"])
+            loaded = UserDataStore(path)
+            self.assertEqual(loaded.minecraft_versions_for("abc"), ["1.20.1", "1.21"])
+            loaded.set_minecraft_versions("abc", [])
+            self.assertEqual(UserDataStore(path).minecraft_versions_for("abc"), [])
+
     def test_profile_crud_and_mod_list(self) -> None:
-        """Профиль сохраняет экземпляр и набор модов, позволяет обновлять и удалять."""
+        """A profile stores its instance and mods and supports updates and deletion."""
         with tempfile.TemporaryDirectory() as temporary_dir:
             path = Path(temporary_dir) / "user_data.json"
             store = UserDataStore(path)

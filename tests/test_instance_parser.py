@@ -1,4 +1,4 @@
-"""Тесты чтения метаданных экземпляров Prism."""
+"""Tests for reading Prism instance metadata."""
 
 import json
 import tempfile
@@ -9,10 +9,10 @@ from launchers.prism.instance_parser import parse_instance, scan_instances
 
 
 class InstanceParserTests(unittest.TestCase):
-    """Проверяет определение версии Minecraft и загрузчика."""
+    """Verify Minecraft version and loader detection."""
 
     def test_parse_fabric_instance(self) -> None:
-        """Распознаёт Fabric и версию Minecraft."""
+        """Recognize Fabric and the Minecraft version."""
         with tempfile.TemporaryDirectory() as temp_dir:
             instance_dir = Path(temp_dir) / "Fabric test"
             instance_dir.mkdir()
@@ -39,7 +39,7 @@ class InstanceParserTests(unittest.TestCase):
             self.assertEqual(instance.instance_id, "Fabric test")
 
     def test_scan_ignores_unrelated_directory(self) -> None:
-        """Не считает произвольную папку экземпляром Prism."""
+        """Do not treat an arbitrary folder as a Prism instance."""
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             (root / "instances").mkdir()

@@ -1,11 +1,11 @@
-"""Поиск каталогов данных Prism Launcher."""
+"""Discover Prism Launcher data directories."""
 
 import os
 from pathlib import Path
 
 
 def default_prism_candidates() -> list[Path]:
-    """Возвращает известные стандартные пути Prism."""
+    """Return known standard Prism paths."""
     candidates: list[Path] = []
     appdata = os.environ.get("APPDATA")
     if appdata:
@@ -32,7 +32,7 @@ def default_prism_candidates() -> list[Path]:
 
 
 def find_default_prism_data_dir() -> Path | None:
-    """Находит стандартный каталог Prism с папкой instances."""
+    """Find the standard Prism directory containing an instances folder."""
     for candidate in default_prism_candidates():
         if (candidate / "instances").is_dir():
             return candidate
@@ -40,5 +40,5 @@ def find_default_prism_data_dir() -> Path | None:
 
 
 def is_prism_data_dir(path: Path) -> bool:
-    """Проверяет, похожа ли папка на каталог данных Prism."""
+    """Check whether a folder resembles a Prism data directory."""
     return path.is_dir() and (path / "instances").is_dir()

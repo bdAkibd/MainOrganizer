@@ -1,4 +1,4 @@
-"""Модель экземпляра Prism Launcher."""
+"""Prism Launcher instance model."""
 
 from dataclasses import dataclass
 from pathlib import Path
@@ -6,7 +6,7 @@ from pathlib import Path
 
 @dataclass(slots=True)
 class PrismInstance:
-    """Хранит сведения об одном экземпляре Prism."""
+    """Store information about one Prism instance."""
 
     name: str
     instance_id: str

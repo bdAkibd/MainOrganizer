@@ -41,5 +41,5 @@ class ConfigBackupTests(unittest.TestCase):
             instance.mkdir()
             success, message = restore_config_backup(archive_path, instance)
             self.assertFalse(success)
-            self.assertIn("Небезопасный путь", message)
+            self.assertIn("Unsafe path", message)
             self.assertFalse((root / "outside.txt").exists())

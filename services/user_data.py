@@ -1,4 +1,4 @@
-"""Сохранение пользовательских тегов и профилей вне игровых каталогов."""
+"""Store user tags and profiles outside game directories."""
 
 import json
 import os
@@ -9,7 +9,7 @@ from typing import Any
 
 
 def default_user_data_path() -> Path:
-    """Возвращает путь к пользовательским данным MainOrginizer."""
+    """Return the MainOrginizer user data path."""
     local_app_data = os.environ.get("LOCALAPPDATA")
     if local_app_data:
         return Path(local_app_data) / "MainOrginizer" / "user_data.json"
@@ -17,18 +17,26 @@ def default_user_data_path() -> Path:
 
 
 class UserDataStore:
-    """Читает и безопасно сохраняет теги и описания профилей в JSON."""
+    """Read and safely save tags and profile descriptions as JSON."""
 
     def __init__(self, path: Path | None = None) -> None:
-        """Загружает пользовательские данные из указанного или стандартного файла."""
+        """Load user data from the specified or default file."""
         self.path = path or default_user_data_path()
-        self.data: dict[str, Any] = {"version": 1, "mod_tags": {}, "profiles": [], "game_dirs": []}
+        self.data: dict[str, Any] = {
+            "version": 1,
+            "mod_tags": {},
+            "minecraft_version_overrides": {},
+            "profiles": [],
+            "game_dirs": [],
+        }
         try:
             loaded = json.loads(self.path.read_text(encoding="utf-8"))
             if isinstance(loaded, dict):
                 tags = loaded.get("mod_tags", {})
                 profiles = loaded.get("profiles", [])
                 self.data["mod_tags"] = tags if isinstance(tags, dict) else {}
+                overrides = loaded.get("minecraft_version_overrides", {})
+                self.data["minecraft_version_overrides"] = overrides if isinstance(overrides, dict) else {}
                 self.data["profiles"] = profiles if isinstance(profiles, list) else []
                 game_dirs = loaded.get("game_dirs", [])
                 self.data["game_dirs"] = game_dirs if isinstance(game_dirs, list) else []
@@ -40,7 +48,7 @@ class UserDataStore:
             pass
 
     def save(self) -> None:
-        """Атомарно сохраняет JSON, не затрагивая файлы игры."""
+        """Atomically save JSON without touching game files."""
         self.path.parent.mkdir(parents=True, exist_ok=True)
         temporary_path: Path | None = None
         try:
@@ -55,12 +63,12 @@ class UserDataStore:
                 temporary_path.unlink(missing_ok=True)
 
     def tags_for(self, sha256: str) -> list[str]:
-        """Возвращает метки файла по его хешу."""
+        """Return tags for a file by its hash."""
         value = self.data["mod_tags"].get(sha256, [])
         return [str(tag) for tag in value if isinstance(tag, str)] if isinstance(value, list) else []
 
     def set_tags(self, sha256: str, tags: list[str]) -> None:
-        """Сохраняет уникальные метки файла по SHA-256."""
+        """Save unique file tags by SHA-256."""
         normalized = list(dict.fromkeys(tag.strip() for tag in tags if tag.strip()))
         if normalized:
             self.data["mod_tags"][sha256] = normalized
@@ -68,12 +76,26 @@ class UserDataStore:
             self.data["mod_tags"].pop(sha256, None)
         self.save()
 
+    def minecraft_versions_for(self, sha256: str) -> list[str]:
+        """Return a user's Minecraft-version override for a mod file."""
+        value = self.data["minecraft_version_overrides"].get(sha256, [])
+        return [str(version) for version in value if isinstance(version, str)] if isinstance(value, list) else []
+
+    def set_minecraft_versions(self, sha256: str, versions: list[str]) -> None:
+        """Persist or clear a user's Minecraft-version override for a mod."""
+        normalized = list(dict.fromkeys(version.strip() for version in versions if version.strip()))
+        if normalized:
+            self.data["minecraft_version_overrides"][sha256] = normalized
+        else:
+            self.data["minecraft_version_overrides"].pop(sha256, None)
+        self.save()
+
     def profiles(self) -> list[dict[str, Any]]:
-        """Возвращает список профилей."""
+        """Return the profile list."""
         return self.data["profiles"]
 
     def add_profile(self, name: str, instance: dict[str, str], mod_hashes: list[str]) -> dict[str, Any]:
-        """Создаёт профиль, связанный с экземпляром Prism и набором модов."""
+        """Create a profile linked to a Prism instance and mod set."""
         profile = {
             "id": uuid.uuid4().hex,
             "name": name.strip(),
@@ -91,7 +113,7 @@ class UserDataStore:
         return profile
 
     def update_profile_mods(self, profile_id: str, mod_hashes: list[str]) -> bool:
-        """Обновляет сохранённый набор модов профиля."""
+        """Update the saved mod set for a profile."""
         for profile in self.data["profiles"]:
             if profile.get("id") == profile_id:
                 profile["enabled_mod_hashes"] = list(dict.fromkeys(mod_hashes))
@@ -111,7 +133,7 @@ class UserDataStore:
         return False
 
     def rename_profile(self, profile_id: str, name: str) -> bool:
-        """Переименовывает профиль."""
+        """Rename a profile."""
         for profile in self.data["profiles"]:
             if profile.get("id") == profile_id:
                 profile["name"] = name.strip()
@@ -120,7 +142,7 @@ class UserDataStore:
         return False
 
     def delete_profile(self, profile_id: str) -> bool:
-        """Удаляет описание профиля, не удаляя игровые файлы."""
+        """Delete a profile record without deleting game files."""
         before = len(self.data["profiles"])
         self.data["profiles"] = [profile for profile in self.data["profiles"] if profile.get("id") != profile_id]
         if len(self.data["profiles"]) != before:

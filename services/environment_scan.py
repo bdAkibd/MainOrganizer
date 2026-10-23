@@ -56,7 +56,7 @@ def scan_environment_mods(
         directories = _mods_directories(instance.path)
         if not directories:
             findings.append(EnvironmentFinding(
-                instance.name, "—", "Папка mods не найдена", None, "", instance.path
+                instance.name, "—", "mods folder not found", None, "", instance.path
             ))
             continue
 
@@ -65,21 +65,21 @@ def scan_environment_mods(
                 entries = sorted(mods_dir.iterdir(), key=lambda path: path.name.casefold())
             except OSError:
                 findings.append(EnvironmentFinding(
-                    instance.name, "—", "Нет доступа к папке mods", None, "", mods_dir
+                    instance.name, "—", "No access to mods folder", None, "", mods_dir
                 ))
                 continue
 
             jar_entries = [entry for entry in entries if entry.suffix.lower() == ".jar"]
             if not jar_entries:
                 findings.append(EnvironmentFinding(
-                    instance.name, "—", "Папка mods пуста", None, "", mods_dir
+                    instance.name, "—", "mods folder is empty", None, "", mods_dir
                 ))
                 continue
 
             for path in jar_entries:
                 if path.is_symlink() and not path.exists():
                     findings.append(EnvironmentFinding(
-                        instance.name, path.name, "Символическая ссылка не найдена", None, "", path
+                        instance.name, path.name, "Symbolic link not found", None, "", path
                     ))
                     continue
                 try:
@@ -96,24 +96,24 @@ def scan_environment_mods(
                         except OSError:
                             digest, size = "", None
                         findings.append(EnvironmentFinding(
-                            instance.name, path.name, "Ссылка на библиотеку", size, digest, path
+                            instance.name, path.name, "Library link", size, digest, path
                         ))
                         continue
 
                     if not path.is_file():
                         findings.append(EnvironmentFinding(
-                            instance.name, path.name, "Не является обычным файлом", None, "", path
+                            instance.name, path.name, "Not a regular file", None, "", path
                         ))
                         continue
                     digest = file_sha256(path)
                     size = path.stat().st_size
-                    status = "Копия файла из библиотеки" if digest in library_hashes else "Внешний мод — не импортирован"
+                    status = "Copy of library file" if digest in library_hashes else "External mod — not imported"
                     findings.append(EnvironmentFinding(
                         instance.name, path.name, status, size, digest, path
                     ))
                 except OSError:
                     findings.append(EnvironmentFinding(
-                        instance.name, path.name, "Не удалось прочитать файл", None, "", path
+                        instance.name, path.name, "Could not read file", None, "", path
                     ))
 
     return findings

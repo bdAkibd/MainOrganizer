@@ -34,7 +34,7 @@ class AssetPlan:
     @property
     def can_apply(self) -> bool:
         """Whether safe changes can be applied."""
-        return self.target_dir is not None and not self.errors and any(action.action in {"Создать ссылку", "Убрать ссылку"} for action in self.actions)
+        return self.target_dir is not None and not self.errors and any(action.action in {"Create link", "Remove link"} for action in self.actions)
 
 
 def _target_dir(instance_path: Path, category: str) -> Path:
@@ -69,7 +69,7 @@ def preview_assets(profile: dict[str, Any], library_root: Path, kind: str) -> As
     target = _target_dir(instance_path, category)
     plan = AssetPlan(instance_path, category, target, [], [])
     if not instance_path.is_dir():
-        plan.errors.append(f"Каталог экземпляра не найден: {instance_path}")
+        plan.errors.append(f"Instance directory not found: {instance_path}")
         return plan
     category_library = library_root / category
     assets = scan_assets(library_root, category)
@@ -77,14 +77,14 @@ def preview_assets(profile: dict[str, Any], library_root: Path, kind: str) -> As
     selected = set(profile.get(field, []))
     missing = selected - set(by_hash)
     for digest in sorted(missing):
-        plan.actions.append(AssetAction(digest[:12], "Нет в библиотеке", "Архив выбран в профиле, но отсутствует в библиотеке", target / digest[:12]))
-        plan.errors.append(f"Архив отсутствует в библиотеке: {digest[:12]}")
+        plan.actions.append(AssetAction(digest[:12], "Not in library", "Archive selected in the profile but missing from the library", target / digest[:12]))
+        plan.errors.append(f"Archive missing from the library: {digest[:12]}")
     desired = [by_hash[digest] for digest in selected if digest in by_hash]
     desired_by_name = {asset.name.casefold(): asset for asset in desired}
     try:
         entries = list(target.iterdir()) if target.is_dir() else []
     except OSError as error:
-        plan.errors.append(f"Не удалось прочитать каталог {target}: {error}")
+        plan.errors.append(f"Could not read directory {target}: {error}")
         return plan
     current_by_name = {entry.name.casefold(): entry for entry in entries}
     for entry in entries:
@@ -93,19 +93,19 @@ def preview_assets(profile: dict[str, Any], library_root: Path, kind: str) -> As
         if _managed_link(entry, category_library):
             wanted = desired_by_name.get(entry.name.casefold())
             if wanted and entry.resolve() == wanted.path.resolve():
-                plan.actions.append(AssetAction(entry.name, "Оставить ссылку", "Уже соответствует профилю", entry))
+                plan.actions.append(AssetAction(entry.name, "Keep link", "Already matches profile", entry))
             else:
-                plan.actions.append(AssetAction(entry.name, "Убрать ссылку", "Управляемая ссылка на архив библиотеки, не выбранный в профиле", entry))
+                plan.actions.append(AssetAction(entry.name, "Remove link", "Managed link to a library archive that is not selected in the profile", entry))
         elif entry.name.casefold() in desired_by_name:
-            plan.actions.append(AssetAction(entry.name, "Конфликт", "Обычный файл с таким именем не будет перезаписан", entry))
-            plan.errors.append(f"Конфликт имени: {entry.name}")
+            plan.actions.append(AssetAction(entry.name, "Conflict", "A regular file with this name will not be overwritten", entry))
+            plan.errors.append(f"Name conflict: {entry.name}")
         else:
-            plan.actions.append(AssetAction(entry.name, "Сохранить внешний файл", "Не управляется MainOrginizer", entry))
+            plan.actions.append(AssetAction(entry.name, "Keep external file", "Not managed by MainOrginizer", entry))
     for asset in desired:
         if asset.name.casefold() not in current_by_name:
-            plan.actions.append(AssetAction(asset.name, "Создать ссылку", f"Ссылка на {asset.path}", target / asset.name))
+            plan.actions.append(AssetAction(asset.name, "Create link", f"Link to {asset.path}", target / asset.name))
     if not plan.actions:
-        plan.actions.append(AssetAction("—", "Без изменений", "Каталог уже соответствует профилю", target))
+        plan.actions.append(AssetAction("—", "No changes", "Folder already matches the profile", target))
     return plan
 
 
@@ -115,15 +115,15 @@ def apply_assets(profile: dict[str, Any], library_root: Path, kind: str, backup_
     if plan.errors:
         return False, "\n".join(plan.errors)
     if plan.target_dir is None:
-        return False, "Целевой каталог не найден."
+        return False, "Target folder not found."
     if not plan.can_apply:
-        return True, "Изменения не требуются."
+        return True, "No changes required."
     category_library = library_root / plan.category
     assets = scan_assets(library_root, plan.category)
     field = "enabled_resourcepack_hashes" if plan.category == "resourcepacks" else "enabled_shaderpack_hashes"
     selected = set(profile.get(field, []))
     desired = [asset for asset in assets if asset.sha256 in selected]
-    remove_paths = [action.path for action in plan.actions if action.action == "Убрать ссылку"]
+    remove_paths = [action.path for action in plan.actions if action.action == "Remove link"]
     remove_names = {path.name.casefold() for path in remove_paths}
     create_assets = [asset for asset in desired if asset.name.casefold() in remove_names or not (plan.target_dir / asset.name).exists()]
     manifest: dict[str, Any] = {"id": uuid.uuid4().hex, "type": "assets", "category": plan.category, "profile_name": str(profile.get("name", "")), "target_dir": str(plan.target_dir), "created_links": [], "removed_links": [], "completed": False, "rolled_back": False}
@@ -139,14 +139,14 @@ def apply_assets(profile: dict[str, Any], library_root: Path, kind: str, backup_
         plan.target_dir.mkdir(parents=True, exist_ok=True)
         for path in remove_paths:
             if not _managed_link(path, category_library):
-                raise RuntimeError(f"Ссылка изменилась после просмотра: {path}")
+                raise RuntimeError(f"The link changed after preview: {path}")
             manifest["removed_links"].append({"path": str(path), "target": str(path.resolve())})
             save_manifest()
             path.unlink()
         for asset in create_assets:
             destination = plan.target_dir / asset.name
             if destination.exists() or destination.is_symlink():
-                raise RuntimeError(f"Путь уже занят, файл не перезаписан: {destination}")
+                raise RuntimeError(f"Path is already occupied; the file was not overwritten: {destination}")
             manifest["created_links"].append({"path": str(destination), "target": str(asset.path.resolve())})
             save_manifest()
             os.symlink(asset.path, destination, target_is_directory=False)
@@ -155,10 +155,10 @@ def apply_assets(profile: dict[str, Any], library_root: Path, kind: str, backup_
         manifest["rolled_back"] = not errors
         manifest["rollback_errors"] = errors
         save_manifest()
-        return False, f"Не удалось применить ассеты: {error}" + ("\nОшибки отката: " + "; ".join(errors) if errors else "\nЧастичные изменения отменены.")
+        return False, f"Could not apply assets: {error}" + ("\nRollback errors: " + "; ".join(errors) if errors else "\nPartial changes were rolled back.")
     manifest["completed"] = True
     save_manifest()
-    return True, f"Применение завершено. Создано ссылок: {len(manifest['created_links'])}; убрано: {len(manifest['removed_links'])}."
+    return True, f"Application completed. Links created: {len(manifest['created_links'])}; removed: {len(manifest['removed_links'])}."
 
 
 def rollback_assets(backup_dir: Path | None = None, library_root: Path | None = None) -> tuple[bool, str]:
@@ -166,7 +166,7 @@ def rollback_assets(backup_dir: Path | None = None, library_root: Path | None = 
     backup_dir = backup_dir or (default_backup_dir() / "assets")
     manifests: list[tuple[float, Path, dict[str, Any]]] = []
     if not backup_dir.is_dir():
-        return False, "Операций с ассетами для отката нет."
+        return False, "No asset operations are available for rollback."
     for path in backup_dir.glob("*.json"):
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
@@ -175,14 +175,14 @@ def rollback_assets(backup_dir: Path | None = None, library_root: Path | None = 
         except (OSError, json.JSONDecodeError):
             continue
     if not manifests:
-        return False, "Нет применённых операций с ассетами для отката."
+        return False, "No applied asset operations are available for rollback."
     _, manifest_path, manifest = max(manifests, key=lambda item: item[0])
     library = (library_root or default_asset_library_dir()) / manifest.get("category", "")
     errors = _undo(manifest, library)
     manifest["rolled_back"] = not errors
     manifest["rollback_errors"] = errors
     manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
-    return (not errors, "Откат выполнен." if not errors else "Ошибки отката: " + "; ".join(errors))
+    return (not errors, "Rollback completed." if not errors else "Rollback errors: " + "; ".join(errors))
 
 
 def _undo(manifest: dict[str, Any], library_dir: Path) -> list[str]:
@@ -194,7 +194,7 @@ def _undo(manifest: dict[str, Any], library_dir: Path) -> list[str]:
             if path.is_symlink() and path.resolve() == Path(record["target"]).resolve():
                 path.unlink()
             elif path.exists() or path.is_symlink():
-                errors.append(f"Сохранён изменённый путь: {path}")
+                errors.append(f"Changed path was preserved: {path}")
         except OSError as error:
             errors.append(f"{path}: {error}")
     for record in reversed(manifest.get("removed_links", [])):
@@ -202,11 +202,11 @@ def _undo(manifest: dict[str, Any], library_dir: Path) -> list[str]:
         target = Path(record["target"])
         try:
             if path.exists() or path.is_symlink():
-                errors.append(f"Нельзя восстановить, путь занят: {path}")
+                errors.append(f"Cannot restore; path is occupied: {path}")
             elif _is_inside(target, library_dir):
                 os.symlink(target, path, target_is_directory=False)
             else:
-                errors.append(f"Цель больше не находится в библиотеке: {target}")
+                errors.append(f"The target is no longer in the library: {target}")
         except OSError as error:
             errors.append(f"{path}: {error}")
     return errors

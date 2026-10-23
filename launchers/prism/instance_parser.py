@@ -1,4 +1,4 @@
-"""Чтение метаданных экземпляров Prism Launcher."""
+"""Read Prism Launcher instance metadata."""
 
 import configparser
 import json
@@ -9,14 +9,14 @@ from models.instance import PrismInstance
 
 
 def _read_instance_cfg(path: Path) -> dict[str, str]:
-    """Читает ключи instance.cfg без предположения о наличии секции INI."""
+    """Read instance.cfg keys without assuming an INI section exists."""
     values: dict[str, str] = {}
     try:
         lines = path.read_text(encoding="utf-8-sig", errors="replace").splitlines()
     except OSError:
         return values
 
-    # Prism config обычно использует строки key=value. Поддерживаем также INI-подобный формат.
+    # Prism config usually uses key=value lines; also support an INI-like format.
     parser = configparser.ConfigParser(interpolation=None)
     try:
         parser.read_string("[instance]\n" + "\n".join(lines))
@@ -34,7 +34,7 @@ def _read_instance_cfg(path: Path) -> dict[str, str]:
 
 
 def _read_pack(path: Path) -> dict[str, Any]:
-    """Читает список компонентов из mmc-pack.json."""
+    """Read the component list from mmc-pack.json."""
     try:
         data = json.loads(path.read_text(encoding="utf-8-sig"))
     except (OSError, json.JSONDecodeError):
@@ -43,15 +43,15 @@ def _read_pack(path: Path) -> dict[str, Any]:
 
 
 def _component_version(component: dict[str, Any]) -> str:
-    """Возвращает строку версии компонента."""
+    """Return a component version string."""
     version = component.get("version", "")
     return str(version) if version is not None else ""
 
 
 def _detect_components(pack: dict[str, Any]) -> tuple[str, str, str]:
-    """Определяет Minecraft и загрузчик по компонентам сборки."""
-    minecraft_version = "Не определена"
-    loader = "Не определён"
+    """Determine Minecraft and the loader from pack components."""
+    minecraft_version = "Not detected"
+    loader = "Not detected"
     loader_version = ""
 
     components = pack.get("components", [])
@@ -80,30 +80,30 @@ def _detect_components(pack: dict[str, Any]) -> tuple[str, str, str]:
                 loader_version = version
                 break
 
-    if loader == "Не определён" and minecraft_version != "Не определена":
+    if loader == "Not detected" and minecraft_version != "Not detected":
         loader = "Vanilla"
 
     return minecraft_version, loader, loader_version
 
 
 def parse_instance(instance_dir: Path) -> PrismInstance:
-    """Читает метаданные одного экземпляра Prism."""
+    """Read metadata for one Prism instance."""
     cfg = _read_instance_cfg(instance_dir / "instance.cfg")
     pack = _read_pack(instance_dir / "mmc-pack.json")
     minecraft_version, loader, loader_version = _detect_components(pack)
 
     name = cfg.get("name", instance_dir.name).strip() or instance_dir.name
-    # Имя каталога — стабильный идентификатор экземпляра внутри Prism.
+    # The directory name is the stable instance identifier inside Prism.
     instance_id = instance_dir.name
 
     if not (instance_dir / "instance.cfg").is_file():
-        status = "Нет instance.cfg"
+        status = "instance.cfg is missing"
     elif not (instance_dir / "mmc-pack.json").is_file():
-        status = "Нет mmc-pack.json"
-    elif minecraft_version == "Не определена":
-        status = "Не удалось определить версию"
+        status = "mmc-pack.json is missing"
+    elif minecraft_version == "Not detected":
+        status = "Could not detect version"
     else:
-        status = "Готов к проверке"
+        status = "Ready to check"
 
     return PrismInstance(
         name=name,
@@ -117,7 +117,7 @@ def parse_instance(instance_dir: Path) -> PrismInstance:
 
 
 def scan_instances(prism_data_dir: Path) -> list[PrismInstance]:
-    """Сканирует подпапки instances и возвращает распознанные записи."""
+    """Scan instance subfolders and return recognized records."""
     instances_dir = prism_data_dir / "instances"
     if not instances_dir.is_dir():
         return []
@@ -132,7 +132,7 @@ def scan_instances(prism_data_dir: Path) -> list[PrismInstance]:
         return results
 
     for directory in directories:
-        # Не принимаем произвольные подпапки за экземпляры, если нет ни одного файла-маркера.
+    # Do not treat arbitrary folders as instances without at least one marker file.
         if not (directory / "instance.cfg").is_file() and not (directory / "mmc-pack.json").is_file():
             continue
         results.append(parse_instance(directory))
