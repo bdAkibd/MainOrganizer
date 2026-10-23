@@ -9,11 +9,11 @@ from typing import Any
 
 
 def default_user_data_path() -> Path:
-    """Return the MainOrginizer user data path."""
+    """Return the MineOrganizer user data path."""
     local_app_data = os.environ.get("LOCALAPPDATA")
     if local_app_data:
-        return Path(local_app_data) / "MainOrginizer" / "user_data.json"
-    return Path.home() / ".local" / "share" / "MainOrginizer" / "user_data.json"
+        return Path(local_app_data) / "MineOrganizer" / "user_data.json"
+    return Path.home() / ".local" / "share" / "MineOrganizer" / "user_data.json"
 
 
 class UserDataStore:

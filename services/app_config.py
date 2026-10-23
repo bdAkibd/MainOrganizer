@@ -8,11 +8,11 @@ from typing import Any
 
 
 def default_app_config_path() -> Path:
-    """Return the MainOrginizer settings configuration path."""
+    """Return the MineOrganizer settings configuration path."""
     local_app_data = os.environ.get("LOCALAPPDATA")
     if local_app_data:
-        return Path(local_app_data) / "MainOrginizer" / "config.json"
-    return Path.home() / ".local" / "share" / "MainOrginizer" / "config.json"
+        return Path(local_app_data) / "MineOrganizer" / "config.json"
+    return Path.home() / ".local" / "share" / "MineOrganizer" / "config.json"
 
 
 class AppConfig:

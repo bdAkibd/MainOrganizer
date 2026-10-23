@@ -5,7 +5,12 @@ import unittest
 import zipfile
 from pathlib import Path
 
-from services.config_backups import create_config_backup, restore_config_backup
+from services.config_backups import (
+    create_config_backup,
+    delete_config_backup,
+    delete_config_directory,
+    restore_config_backup,
+)
 
 
 class ConfigBackupTests(unittest.TestCase):
@@ -43,3 +48,23 @@ class ConfigBackupTests(unittest.TestCase):
             self.assertFalse(success)
             self.assertIn("Unsafe path", message)
             self.assertFalse((root / "outside.txt").exists())
+
+    def test_deletes_config_directory_and_backup(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_dir:
+            root = Path(temporary_dir)
+            instance = root / "instance"
+            config = instance / ".minecraft" / "config"
+            config.mkdir(parents=True)
+            (config / "settings.txt").write_text("data", encoding="utf-8")
+            backup_root = root / "backups"
+            success, _ = create_config_backup(instance, backup_root)
+            self.assertTrue(success)
+            backup = next(backup_root.glob("*.zip"))
+
+            success, _ = delete_config_backup(backup, backup_root)
+            self.assertTrue(success)
+            self.assertFalse(backup.exists())
+
+            success, _ = delete_config_directory(config)
+            self.assertTrue(success)
+            self.assertFalse(config.exists())

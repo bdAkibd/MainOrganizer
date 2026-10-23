@@ -244,7 +244,7 @@ def discover_game_environments(path: Path, launcher: str | None = None) -> list[
     launcher = launcher or launcher_for_game_directory(path)
 
     environments: list[Path] = []
-    # MainOrginizer can store isolated game directories in .minecraft/instances.
+    # MineOrganizer can store isolated game directories in .minecraft/instances.
     instances_dir = path if path.name.casefold() == "instances" else path / "instances"
     if instances_dir.is_dir():
         environments.extend(sorted(

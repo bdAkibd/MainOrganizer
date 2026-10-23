@@ -43,8 +43,8 @@ def default_backup_dir() -> Path:
     """Returns the directory used for virtualization rollback manifests."""
     local_app_data = os.environ.get("LOCALAPPDATA")
     if local_app_data:
-        return Path(local_app_data) / "MainOrginizer" / "rollback"
-    return Path.home() / ".local" / "share" / "MainOrginizer" / "rollback"
+        return Path(local_app_data) / "MineOrganizer" / "rollback"
+    return Path.home() / ".local" / "share" / "MineOrganizer" / "rollback"
 
 
 def find_mods_dir(instance_path: Path, profile: dict[str, Any] | None = None) -> Path | None:
@@ -153,7 +153,7 @@ def preview_profile(profile: dict[str, Any], library_dir: Path) -> Virtualizatio
             plan.actions.append(VirtualizationAction(entry.name, "Conflict", f"A regular file with this name already exists; it will not be overwritten. Expected {wanted.name}", entry))
             plan.errors.append(f"Name conflict: {entry.name}")
         else:
-            plan.actions.append(VirtualizationAction(entry.name, "Keep external file", "Not managed by MainOrginizer and will not be changed", entry))
+            plan.actions.append(VirtualizationAction(entry.name, "Keep external file", "Not managed by MineOrganizer and will not be changed", entry))
 
     for mod in desired:
         if mod.name.casefold() not in current_by_name:

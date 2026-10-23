@@ -21,6 +21,6 @@ def load_manual_html(locale: str = DEFAULT_LOCALE) -> str:
         return manual_path(locale).read_text(encoding="utf-8")
     except OSError:
         return (
-            "<h1>MainOrginizer User Manual</h1>"
+            "<h1>MineOrganizer User Manual</h1>"
             "<p>The manual file could not be loaded. Please check the installation.</p>"
         )

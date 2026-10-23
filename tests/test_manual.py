@@ -4,7 +4,7 @@ from services.manual import load_manual_html, manual_path
 def test_manual_is_available_in_english():
     manual = load_manual_html()
 
-    assert "MainOrginizer User Manual" in manual
+    assert "MineOrganizer User Manual" in manual
     assert "Game environments" in manual
     assert "Resource packs and shaders" in manual
     assert "<html lang=\"en\">" in manual

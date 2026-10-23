@@ -12,7 +12,7 @@ from services.mod_library import file_sha256
 def default_asset_library_dir() -> Path:
     """Returns the root directory for asset libraries."""
     local_app_data = os.environ.get("LOCALAPPDATA")
-    root = Path(local_app_data) / "MainOrginizer" / "library" if local_app_data else Path.home() / ".local" / "share" / "MainOrginizer" / "library"
+    root = Path(local_app_data) / "MineOrganizer" / "library" if local_app_data else Path.home() / ".local" / "share" / "MineOrganizer" / "library"
     return root / "assets"
 
 

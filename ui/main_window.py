@@ -1,9 +1,9 @@
-"""MainOrginizer main window."""
+"""MineOrganizer main window."""
 
 from pathlib import Path
 
 from PySide6.QtCore import Qt, QUrl
-from PySide6.QtGui import QAction, QActionGroup, QDesktopServices
+from PySide6.QtGui import QAction, QActionGroup, QDesktopServices, QIcon
 from PySide6.QtWidgets import (
     QApplication,
     QAbstractButton,
@@ -109,11 +109,19 @@ from services.mod_metadata import (
 from services.mod_conflicts import check_mod_conflicts
 from services.asset_library import default_asset_library_dir, import_assets, scan_assets
 from services.asset_virtualization import preview_assets, apply_assets, rollback_assets
-from services.config_backups import create_config_backup, find_config_dir, list_config_backups, restore_config_backup
+from services.config_backups import (
+    create_config_backup,
+    delete_config_backup,
+    delete_config_directory,
+    find_config_dir,
+    list_config_backups,
+    restore_config_backup,
+)
 from services.save_library import default_save_library_dir, find_saves_dir, import_save, install_save, scan_saves
 from services.environment_scan import scan_environment_mods
 from services.user_data import UserDataStore
 from services.app_config import AppConfig
+from services.app_identity import APP_NAME, APP_SHORT_NAME, app_icon_path
 from services.localization import SUPPORTED_LOCALES, locale_name, translate, translate_many
 from services.manual import load_manual_html
 from services.virtualization import (
@@ -209,6 +217,7 @@ class ModSelectionDialog(QDialog):
         """Create a checked mod list with compatibility filters."""
         super().__init__()
         self.locale = locale
+        self.setWindowIcon(QIcon(str(app_icon_path())))
         self.setWindowTitle(translate("Profile mods", self.locale))
         self.resize(620, 520)
         self.list_widget = QListWidget()
@@ -310,7 +319,8 @@ class ManualDialog(QDialog):
 
     def __init__(self, parent=None, locale: str = "en") -> None:
         super().__init__(parent)
-        self.setWindowTitle("MainOrginizer User Manual")
+        self.setWindowIcon(QIcon(str(app_icon_path())))
+        self.setWindowTitle(f"{APP_NAME} User Manual")
         self.resize(1100, 760)
         self.setMinimumSize(720, 480)
 
@@ -332,7 +342,8 @@ class MainWindow(QMainWindow):
     def __init__(self) -> None:
         """Build the interface and perform the initial scan."""
         super().__init__()
-        self.setWindowTitle("MainOrginizer")
+        self.setWindowTitle(APP_SHORT_NAME)
+        self.setWindowIcon(QIcon(str(app_icon_path())))
         self.resize(1600, 780)
         self.setMinimumSize(720, 540)
         self.app_config = AppConfig()
@@ -363,9 +374,15 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout(central)
         layout.setContentsMargins(18, 14, 18, 10)
         layout.setSpacing(10)
-        heading = QLabel("MainOrginizer — Minecraft modification manager")
+        heading_row = QHBoxLayout()
+        icon_label = QLabel()
+        icon_label.setPixmap(QIcon(str(app_icon_path())).pixmap(32, 32))
+        heading_row.addWidget(icon_label)
+        heading = QLabel(f"{APP_SHORT_NAME} — Minecraft modification manager")
         heading.setObjectName("appHeading")
-        layout.addWidget(heading)
+        heading_row.addWidget(heading)
+        heading_row.addStretch(1)
+        layout.addLayout(heading_row)
         subtitle = QLabel(
             "Manage game environments, the mod library, and profiles in one window. "
             "Drag column separators with the mouse."
@@ -393,6 +410,7 @@ class MainWindow(QMainWindow):
         self.environment_table.customContextMenuRequested.connect(lambda pos: self._show_table_context_menu(self.environment_table, pos))
         self.virtualization_table.customContextMenuRequested.connect(lambda pos: self._show_table_context_menu(self.virtualization_table, pos))
         self.asset_plan_table.customContextMenuRequested.connect(lambda pos: self._show_table_context_menu(self.asset_plan_table, pos))
+        self.config_entries_table.customContextMenuRequested.connect(lambda pos: self._show_table_context_menu(self.config_entries_table, pos))
         self.library_table.cellDoubleClicked.connect(lambda row, column: self.edit_selected_mod_tags())
         self.profiles_table.cellDoubleClicked.connect(lambda row, column: self.edit_profile_mods())
         self.profiles_table.currentCellChanged.connect(self._profile_row_changed)
@@ -427,7 +445,7 @@ class MainWindow(QMainWindow):
     def _apply_locale(self, locale: str) -> None:
         """Update static interface labels after a locale change."""
         self.locale = locale if locale in SUPPORTED_LOCALES else "en"
-        self.setWindowTitle(translate("MainOrginizer", self.locale))
+        self.setWindowTitle(APP_SHORT_NAME)
         for widget in self.findChildren(QAbstractButton):
             widget.setText(translate(widget.text(), self.locale))
         for widget in self.findChildren(QLabel):
@@ -910,7 +928,7 @@ class MainWindow(QMainWindow):
         answer = QMessageBox.warning(
             self, "Apply profile",
             f"Apply profile «{profile.get('name', '')}»?\n\n"
-            f"Links to be created: {creates}; MainOrginizer links to remove: {removes}.\n"
+            f"Links to be created: {creates}; MineOrganizer links to remove: {removes}.\n"
             "Regular files will remain unchanged. Close Minecraft before continuing.",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel,
             QMessageBox.StandardButton.Cancel,
@@ -1180,6 +1198,9 @@ class MainWindow(QMainWindow):
             sorts = [kind.casefold(), name.casefold(), size, path.casefold()]
             for column, value in enumerate(values):
                 self._set_item(self.config_entries_table, row, column, value, sorts[column], path)
+            kind_item = self.config_entries_table.item(row, 0)
+            if kind_item is not None:
+                kind_item.setData(Qt.ItemDataRole.UserRole + 3, kind)
         self.config_entries_table.setSortingEnabled(True)
         self._fit_table_columns(self.config_entries_table)
 
@@ -1205,6 +1226,42 @@ class MainWindow(QMainWindow):
             return
         success, message = restore_config_backup(Path(backup_path), Path(instance_path))
         (QMessageBox.information if success else QMessageBox.critical)(self, "Config restoration", message)
+        self.refresh_config_backup_choices()
+
+    def delete_selected_config_entry(self) -> None:
+        """Delete the selected config directory or backup archive."""
+        row = self.config_entries_table.currentRow()
+        if row < 0:
+            return
+        kind_item = self.config_entries_table.item(row, 0)
+        path_item = self.config_entries_table.item(row, 3)
+        if kind_item is None or path_item is None:
+            return
+        kind = str(kind_item.data(Qt.ItemDataRole.UserRole + 3) or "")
+        path = Path(str(path_item.data(Qt.ItemDataRole.UserRole + 2) or path_item.toolTip()))
+        if kind == "Config":
+            title = "Delete configs"
+            prompt = f'Delete all files in the config folder "{path}"?'
+        elif kind == "Backup":
+            title = "Delete backup"
+            prompt = f'Delete the backup archive "{path.name}"?'
+        else:
+            return
+        answer = QMessageBox.warning(
+            self,
+            title,
+            prompt,
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Cancel,
+        )
+        if answer != QMessageBox.StandardButton.Yes:
+            return
+        success, message = (
+            delete_config_directory(path)
+            if kind == "Config"
+            else delete_config_backup(path)
+        )
+        (QMessageBox.information if success else QMessageBox.warning)(self, title, message)
         self.refresh_config_backup_choices()
 
     def refresh_environment_scan(self) -> None:
@@ -1326,6 +1383,17 @@ class MainWindow(QMainWindow):
                 self.delete_selected_asset()
             elif chosen == copy_path:
                 self._copy_selected_path(table, 2)
+            elif chosen == open_folder:
+                self._open_selected_path(table)
+        elif table is self.config_entries_table:
+            delete = menu.addAction(translate("Delete config", self.locale))
+            open_folder = menu.addAction(translate("Open folder", self.locale))
+            copy_path = menu.addAction(translate("Copy path", self.locale))
+            chosen = menu.exec(table.viewport().mapToGlobal(position))
+            if chosen == delete:
+                self.delete_selected_config_entry()
+            elif chosen == copy_path:
+                self._copy_selected_path(table, 3)
             elif chosen == open_folder:
                 self._open_selected_path(table)
         else:
@@ -1588,7 +1656,7 @@ class MainWindow(QMainWindow):
             QMessageBox.information(self, "Disconnect folder", "The selected environment is not connected to a folder that can be disconnected with this button.")
             return
         answer = QMessageBox.question(
-            self, "Disconnect folder", "Remove the folder from MainOrginizer? Minecraft files will not be deleted.",
+            self, "Disconnect folder", "Remove the folder from MineOrganizer? Minecraft files will not be deleted.",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel,
             QMessageBox.StandardButton.Cancel,
         )

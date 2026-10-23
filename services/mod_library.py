@@ -12,8 +12,8 @@ def default_library_dir() -> Path:
     """Return the default shared mod library directory."""
     local_app_data = os.environ.get("LOCALAPPDATA")
     if local_app_data:
-        return Path(local_app_data) / "MainOrginizer" / "library" / "mods"
-    return Path.home() / ".local" / "share" / "MainOrginizer" / "library" / "mods"
+        return Path(local_app_data) / "MineOrganizer" / "library" / "mods"
+    return Path.home() / ".local" / "share" / "MineOrganizer" / "library" / "mods"
 
 
 def file_sha256(path: Path) -> str:

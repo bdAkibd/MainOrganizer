@@ -1,6 +1,7 @@
 """Backup and safe restore of an instance's config directory."""
 
 import os
+import shutil
 import zipfile
 from datetime import datetime
 from pathlib import Path
@@ -9,7 +10,7 @@ from pathlib import Path
 def default_config_backup_dir() -> Path:
     """Returns the directory for configuration backups."""
     local_app_data = os.environ.get("LOCALAPPDATA")
-    return (Path(local_app_data) / "MainOrginizer" / "config_backups") if local_app_data else Path.home() / ".local" / "share" / "MainOrginizer" / "config_backups"
+    return (Path(local_app_data) / "MineOrganizer" / "config_backups") if local_app_data else Path.home() / ".local" / "share" / "MineOrganizer" / "config_backups"
 
 
 def find_config_dir(instance_path: Path) -> Path | None:
@@ -51,6 +52,35 @@ def list_config_backups(backup_root: Path | None = None) -> list[Path]:
     if not backup_root.is_dir():
         return []
     return sorted(backup_root.glob("*.zip"), key=lambda path: path.stat().st_mtime, reverse=True)
+
+
+def delete_config_backup(archive_path: Path, backup_root: Path | None = None) -> tuple[bool, str]:
+    """Delete a backup archive only when it belongs to the backup library."""
+    backup_root = (backup_root or default_config_backup_dir()).resolve()
+    archive_path = archive_path.resolve()
+    try:
+        archive_path.relative_to(backup_root)
+    except ValueError:
+        return False, "The selected archive is outside the backup library."
+    if archive_path.suffix.casefold() != ".zip" or not archive_path.is_file():
+        return False, "The backup archive was not found."
+    try:
+        archive_path.unlink()
+    except OSError as error:
+        return False, f"Could not delete backup: {error}"
+    return True, f"Backup deleted: {archive_path.name}"
+
+
+def delete_config_directory(config_dir: Path) -> tuple[bool, str]:
+    """Delete a config directory after validating that it is named ``config``."""
+    config_dir = config_dir.resolve()
+    if config_dir.name.casefold() != "config" or not config_dir.is_dir():
+        return False, "The config folder was not found."
+    try:
+        shutil.rmtree(config_dir)
+    except OSError as error:
+        return False, f"Could not delete configs: {error}"
+    return True, f"Configs deleted: {config_dir}"
 
 
 def restore_config_backup(archive_path: Path, instance_path: Path, backup_root: Path | None = None) -> tuple[bool, str]:

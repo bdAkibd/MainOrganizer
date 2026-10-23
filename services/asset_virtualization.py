@@ -100,7 +100,7 @@ def preview_assets(profile: dict[str, Any], library_root: Path, kind: str) -> As
             plan.actions.append(AssetAction(entry.name, "Conflict", "A regular file with this name will not be overwritten", entry))
             plan.errors.append(f"Name conflict: {entry.name}")
         else:
-            plan.actions.append(AssetAction(entry.name, "Keep external file", "Not managed by MainOrginizer", entry))
+            plan.actions.append(AssetAction(entry.name, "Keep external file", "Not managed by MineOrganizer", entry))
     for asset in desired:
         if asset.name.casefold() not in current_by_name:
             plan.actions.append(AssetAction(asset.name, "Create link", f"Link to {asset.path}", target / asset.name))

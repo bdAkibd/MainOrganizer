@@ -29,14 +29,33 @@ jobs:
       - name: Run tests
         run: python -m unittest discover -v
 
+      - name: Install Inno Setup
+        run: choco install innosetup --no-progress --yes
+
       - name: Build executable
-        run: python -m PyInstaller --noconfirm --clean --windowed --onefile --name MainOrginizer main.py
+        run: python -m PyInstaller --noconfirm --clean --windowed --onefile --name MineOrganizer --icon MOrg.ico --add-data "MOrg.ico;." main.py
+
+      - name: Build installer
+        shell: pwsh
+        run: |
+          $compilerCandidates = @(
+            "${env:ProgramFiles(x86)}\Inno Setup 7\ISCC.exe",
+            "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
+            "${env:ProgramFiles}\Inno Setup 7\ISCC.exe",
+            "${env:ProgramFiles}\Inno Setup 6\ISCC.exe"
+          )
+          $compiler = $compilerCandidates | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
+          if (-not $compiler) { throw "Inno Setup compiler was not found." }
+          $version = if ($env:GITHUB_REF_TYPE -eq "tag") { $env:GITHUB_REF_NAME.TrimStart("v") } else { "0.16.0" }
+          & $compiler "/DMyAppVersion=$version" installer\MineOrganizer.iss
 
       - name: Upload executable artifact
         uses: actions/upload-artifact@v4
         with:
-          name: MainOrginizer-Windows-x64
-          path: dist/MainOrginizer.exe
+          name: MineOrganizer-Windows-x64
+          path: |
+            dist/MineOrganizer.exe
+            installer/output/MineOrganizer-Setup.exe
           if-no-files-found: error
           retention-days: 30
 
@@ -45,4 +64,6 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
-          files: dist/MainOrginizer.exe
+          files: |
+            dist/MineOrganizer.exe
+            installer/output/MineOrganizer-Setup.exe

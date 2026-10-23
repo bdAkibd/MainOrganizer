@@ -274,7 +274,7 @@ def _modrinth_metadata(path: Path) -> dict[str, Any]:
         url = f"https://api.modrinth.com/v2/version_file/{file_hash}?algorithm=sha1"
         request = urllib.request.Request(
             url,
-            headers={"User-Agent": "MainOrginizer/1.0"},
+            headers={"User-Agent": "MineOrganizer/1.0"},
         )
         with urllib.request.urlopen(request, timeout=2) as response:
             data = json.loads(response.read().decode("utf-8"))
@@ -300,7 +300,7 @@ def _modrinth_cache_path() -> Path:
     """Return the persistent cache location without touching game folders."""
     local_app_data = os.environ.get("LOCALAPPDATA")
     root = Path(local_app_data) if local_app_data else Path.home() / ".local" / "share"
-    return root / "MainOrginizer" / "modrinth_cache.json"
+    return root / "MineOrganizer" / "modrinth_cache.json"
 
 
 def _load_modrinth_cache() -> None:

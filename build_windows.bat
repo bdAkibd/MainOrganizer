@@ -20,13 +20,29 @@ call ".venv-build\Scripts\python.exe" -m pip install -r requirements-build.txt
 if errorlevel 1 goto :error
 call ".venv-build\Scripts\python.exe" -m unittest discover -v
 if errorlevel 1 goto :error
-call ".venv-build\Scripts\python.exe" -m PyInstaller --noconfirm --windowed --onefile --name MainOrginizer main.py
+call ".venv-build\Scripts\python.exe" -m PyInstaller --noconfirm --windowed --onefile --name MineOrganizer --icon MOrg.ico --add-data "MOrg.ico;." main.py
+if errorlevel 1 goto :error
+
+set "ISCC="
+if exist "%ProgramFiles(x86)%\Inno Setup 7\ISCC.exe" set "ISCC=%ProgramFiles(x86)%\Inno Setup 7\ISCC.exe"
+if not defined ISCC if exist "%ProgramFiles(x86)%\Inno Setup 6\ISCC.exe" set "ISCC=%ProgramFiles(x86)%\Inno Setup 6\ISCC.exe"
+if not defined ISCC if exist "%ProgramFiles%\Inno Setup 7\ISCC.exe" set "ISCC=%ProgramFiles%\Inno Setup 7\ISCC.exe"
+if not defined ISCC if exist "%ProgramFiles%\Inno Setup 6\ISCC.exe" set "ISCC=%ProgramFiles%\Inno Setup 6\ISCC.exe"
+if not defined ISCC (
+    echo Inno Setup 6 or 7 was not found.
+    echo Install it from https://jrsoftware.org/isinfo.php and run this file again.
+    pause
+    exit /b 1
+)
+
+call "%ISCC%" "installer\MineOrganizer.iss"
 if errorlevel 1 goto :error
 
 echo.
-echo Build complete: dist\MainOrginizer.exe
+echo Build complete: dist\MineOrganizer.exe
+echo Installer complete: installer\output\MineOrganizer-Setup.exe
 echo Python and application dependencies are included in the executable.
-echo Share only dist\MainOrginizer.exe with testers.
+echo Share only dist\MineOrganizer.exe with testers.
 pause
 exit /b 0
 

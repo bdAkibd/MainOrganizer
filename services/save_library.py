@@ -18,7 +18,7 @@ class SaveEntry:
 def default_save_library_dir() -> Path:
     """Return the shared save library directory."""
     local_app_data = os.environ.get("LOCALAPPDATA")
-    return (Path(local_app_data) / "MainOrginizer" / "library" / "saves") if local_app_data else Path.home() / ".local" / "share" / "MainOrginizer" / "library" / "saves"
+    return (Path(local_app_data) / "MineOrganizer" / "library" / "saves") if local_app_data else Path.home() / ".local" / "share" / "MineOrganizer" / "library" / "saves"
 
 
 def _directory_size(path: Path) -> int:
